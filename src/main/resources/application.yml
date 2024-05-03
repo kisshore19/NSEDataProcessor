@@ -1,0 +1,32 @@
+spring:
+  r2dbc:
+    url: mysql://kishore:kishore@localhost:3306/stock_watchlist_data
+    pool:
+      enabled: true
+      initial-size: 50
+      max-size: 100
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+nse:
+  equity:
+    bhav-data:
+      download-location: D:\Stock Research\Data\NseData\Bhav-Data
+  derivatives:
+    option-data:
+      download-location: D:\Stock Research\Data\NseData\Options-Data
+  index:
+    index-data:
+      download-location: D:\Stock Research\Data\NseData\Index-Data
+
+
+reactor:
+  netty:
+    http:
+      client: INFO
+
+logging:
+  level:
+    root: INFO
