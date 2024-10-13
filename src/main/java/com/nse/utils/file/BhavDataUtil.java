@@ -29,7 +29,7 @@ public class BhavDataUtil {
         List<String> betweenDatesOfLastMonth = getLastMonthDatesTillGivenDate(from, to, "ddMMyyyy");
         List<BhavData> dataList = betweenDatesOfLastMonth.stream().map(FileUtils::loadBhavDataIfNotExistsDownloadFromNse).flatMap(List::stream).collect(Collectors.toList());
 
-        dataList = dataList.stream().filter(data -> (data.getTradingDate().isEqual(from) || data.getTradingDate().isEqual(to)) || (data.getTradingDate().isAfter(from) && data.getTradingDate().isBefore(to))).collect(Collectors.toList());
+        dataList = dataList.stream().filter(data -> ( null != data.getTradingDate()  && ((data.getTradingDate().isEqual(from) || data.getTradingDate().isEqual(to)) || (data.getTradingDate().isAfter(from) && data.getTradingDate().isBefore(to))))).collect(Collectors.toList());
 
         Map<String, List<BhavData>> bySymbolDataList = dataList.stream().collect(Collectors.groupingBy(BhavData::getSymbol));
 
@@ -259,6 +259,29 @@ public class BhavDataUtil {
                 && currentData.getClose() >= lastData.getLow() && currentData.getClose() >= currentData.getOpen()) {
             return OPEN_PRICE_SUPPORT;
         } else if (currentData.getLow() <= lastData.getLow() && currentData.getHigh() < lastData.getHigh() && currentData.getClose() > lastData.getLow()) {
+            return LOWER_LOW;
+        } else
+            return EMPTY;
+    }
+
+    public static CandlesPattern getHighVolumeCandleFormation(BhavStatistics lastData, BhavStatistics currentData) {
+
+        if (currentData.getMaxVolumeQtyHigh() >= lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyLow() <= lastData.getMaxVolumeQtyLow()) {
+            return HIGH_VOLATILE;
+        } else if (currentData.getMaxVolumeQtyHigh() < lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyLow() > lastData.getMaxVolumeQtyLow()) {
+            return LOW_VOLATILE;
+        } else if (currentData.getMaxVolumeQtyHigh() > lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyLow() > lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyClose() >= lastData.getMaxVolumeQtyHigh()) {
+            return TRENDING_HH;
+        } else if (currentData.getMaxVolumeQtyHigh() > lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyLow() > lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyClose() <= lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyClose() <= currentData.getMaxVolumeQtyOpen()) {
+            return OPEN_PRICE_RESISTANCE;
+        } else if (currentData.getMaxVolumeQtyHigh() >= lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyLow() > lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyClose() < lastData.getMaxVolumeQtyHigh()) {
+            return HIGHER_HIGH;
+        } else if (currentData.getMaxVolumeQtyLow() < lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyHigh() < lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyClose() <= lastData.getMaxVolumeQtyLow()) {
+            return TRENDING_LL;
+        } else if (currentData.getMaxVolumeQtyLow() < lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyHigh() < lastData.getMaxVolumeQtyHigh()
+                && currentData.getMaxVolumeQtyClose() >= lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyClose() >= currentData.getMaxVolumeQtyOpen()) {
+            return OPEN_PRICE_SUPPORT;
+        } else if (currentData.getMaxVolumeQtyLow() <= lastData.getMaxVolumeQtyLow() && currentData.getMaxVolumeQtyHigh() < lastData.getMaxVolumeQtyHigh() && currentData.getMaxVolumeQtyClose() > lastData.getMaxVolumeQtyLow()) {
             return LOWER_LOW;
         } else
             return EMPTY;

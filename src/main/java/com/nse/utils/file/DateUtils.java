@@ -34,9 +34,17 @@ public class DateUtils {
             DateTimeFormatter dateFormat = builder.toFormatter();
             return LocalDate.parse(originalDate, dateFormat);
         } catch (Exception e) {
-            e.printStackTrace();
+           // e.printStackTrace();
+
+            if(originalDate.contains("Sep")){
+                originalDate = originalDate.replaceAll("Sep", "Sept");
+            }
+            DateTimeFormatterBuilder builder = new DateTimeFormatterBuilder();
+            builder.parseCaseInsensitive();
+            builder.appendPattern(format);
+            DateTimeFormatter dateFormat = builder.toFormatter();
+            return LocalDate.parse(originalDate, dateFormat);
         }
-        return null;
     }
 
     public static String getDateStringForGivenFormat(String date, String fromFormat, String toFormat) {

@@ -19,7 +19,7 @@ import static com.nse.utils.file.DateUtils.getLastMonthDatesTillGivenDate;
 //Volume and delivery breakout with open price support method
 public class VolumeAndDeliveryVolumeBreakOutWithOpenPriceSupportStrategy {
     public static void main(String[] args) {
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 50; i++) {
             process(i);
         }
     }
@@ -61,7 +61,8 @@ public class VolumeAndDeliveryVolumeBreakOutWithOpenPriceSupportStrategy {
                     secondMonthStatistics.setVolumeBreakout(true);
                 }
                 secondMonthStatistics.setMaxVolumeBreakoutDate(secondMonthStatistics.getMaxVolumeDate());
-                CandlesPattern candleFormation = BhavDataUtil.getCandleFormation(firstMonthStatistics, secondMonthStatistics);
+//                CandlesPattern candleFormation = BhavDataUtil.getCandleFormation(firstMonthStatistics, secondMonthStatistics);
+                CandlesPattern candleFormation = BhavDataUtil.getHighVolumeCandleFormation(firstMonthStatistics, secondMonthStatistics);
                 secondMonthStatistics.setCandlesPattern(candleFormation);
                 BhavDataUtil.createHypo(candleFormation, secondMonthStatistics);
                 //secondMonthStatistics.getAction().add(candleFormation.toString());

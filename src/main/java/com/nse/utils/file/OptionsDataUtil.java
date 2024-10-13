@@ -16,13 +16,13 @@ public class OptionsDataUtil {
         LocalDate fromFirstMonthStartDate = toDate.minusMonths(1).with(TemporalAdjusters.firstDayOfMonth());
         LocalDate fromFirstMonthEndDate = toDate.minusMonths(1).with(TemporalAdjusters.lastDayOfMonth());*/
 
-        String symbol = "SUNPHARMA";
-        double call = 1600;
-        double put = 1500;
+        String symbol = "BRITANNIA";
+        double call = 5400;
+        double put = 400;
         int year = 2024;
-        int month= 3;
-        int fromD = 4;
-        int toD =30;
+        int month= 5;
+        int fromD = 9;
+        int toD =13;
        LocalDate from = LocalDate.of(year,month,fromD);
         LocalDate to = LocalDate.of(year,month,toD);
         LocalDate expDate = LocalDate.of(year,month,fromD);

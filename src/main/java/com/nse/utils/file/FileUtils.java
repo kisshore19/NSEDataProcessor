@@ -6,6 +6,8 @@ import com.nse.model.equity.BhavResult;
 import com.nse.model.equity.BhavStatistics;
 import com.nse.model.equity.Result;
 import com.nse.model.equity.derivaties.OptionsData;
+import com.nse.stratagies.nirmal.DeliveryStrategyCondition;
+import com.nse.stratagies.nirmal.RangeFormationResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.buffer.DataBuffer;
@@ -43,6 +45,21 @@ import java.util.zip.ZipInputStream;
 public class FileUtils {
     final private static Logger LOGGER = LoggerFactory.getLogger(FileUtils.class);
 
+    public static void main(String[] args) {
+        List<String> betweenDates = DateUtils.getDatesBetweenDate("01062024", "01072024", "ddMMyyyy");
+        betweenDates.forEach(s -> {
+            downloadBhavAndOptionsData(s);
+        });
+
+    }
+
+    public static void downloadBhavAndOptionsData(String date) {
+        downloadOptionsData(date).block();
+        downloadBhavData(date).block();
+        downloadIndexData(date).block();
+    }
+
+
     public static Mono<String> downloadOptionsData(String date) {
         try {
             String year = DateUtils.getDateStringForGivenFormat(date, NSEConstant.DATE_FORMAT, "yyyy");
@@ -52,6 +69,7 @@ public class FileUtils {
             String toDownload = String.format(NSEConstant.OPTIONS_DATA_OUTPUT_FOLDER, fullDate);
             return downloadFile(downloadUrl, toDownload);
         } catch (Exception e) {
+            e.printStackTrace();
         }
         return Mono.just("false");
 
@@ -297,14 +315,15 @@ public class FileUtils {
         try (
                 FileWriter fileWriter = new FileWriter(file);
                 BufferedWriter writer = new BufferedWriter(fileWriter)) {
-            writer.write("SCRIPT,BREAK-OUT, TIME-FRAME, PM-BREAK-OUT-DATE, NM-BREAK-OUT-DATE\n");
+            writer.write("SCRIPT,MAX-VOLUME_BREAKOUT-DATE, VOLUME-BREAK-OUT, DELIVERY-BREAK-OUT, TREND, CLOSING, DERIVATIVE \n");
 
             for (BhavStatistics data : stats.values()) {
                 try {
 //                    if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
 //                        writer.write(data.getSymbol() + "," + data.isVolumeBreakout() + "," + String.join(",", data.getAction()) + "\n");
 //                    }
-                    writer.write(data.getSymbol() + "," + data.isVolumeBreakout() + "," + String.join(",", data.getAction()) + "\n");
+                    writer.write(data.getSymbol() + "," +data.getMaxVolumeDate()+ "," + data.isVolumeBreakout() + "," + data.isDeliveryBreakout() + ","
+                            + data.getCandleTrend() +  ", "+ data.getCandlesPattern() +", "+ (NSEConstant.getAllOptionsList().get(data.getSymbol()) != null)+ "\n");
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -314,6 +333,9 @@ public class FileUtils {
         }
         LOGGER.info("File saved to : " + file.getPath());
     }
+
+
+
     public static void saveVolumeAndDeliveryVolumesBreakoutsToFile(String fileName, Map<String, BhavStatistics> stats) {
         File file = new File(fileName);
         try (
@@ -324,21 +346,151 @@ public class FileUtils {
             for (BhavStatistics data : stats.values()) {
                 try {
                     if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
-                        writer.write(data.getSymbol() + "," + data.isDeliveryBreakout()+ "," + data.getMaxDeliveryVolumeBreakOutDate() + ","
-                                + data.isVolumeBreakout() + "," + data.getMaxVolumeBreakoutDate()  + ","
-                                + data.getCandlesPattern()  + ","
-                                + data.getCandleTrend()  + ","
-                                + data.getMaxDeliveryLocation()  + ","
-                                + data.getCloseAsPerHighDeliveryCandle()  + ","
+                        writer.write(data.getSymbol() + "," + data.isDeliveryBreakout() + "," + data.getMaxDeliveryVolumeBreakOutDate() + ","
+                                + data.isVolumeBreakout() + "," + data.getMaxVolumeBreakoutDate() + ","
+                                + data.getCandlesPattern() + ","
+                                + data.getCandleTrend() + ","
+                                + data.getMaxDeliveryLocation() + ","
+                                + data.getCloseAsPerHighDeliveryCandle() + ","
                                 + data.getHypo()
                                 //+ ","
                                 //+data.getAction().stream().map(Object::toString).collect(Collectors.joining(","))
-                                +"\n");
+                                + "\n");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("File saved to : " + file.getPath());
+    }
+
+
+    public static void saveHighVolumeClosingAnalysisToFile(String fileName, Map<String, BhavStatistics> stats) {
+        File file = new File(fileName);
+        try (
+                FileWriter fileWriter = new FileWriter(file);
+                BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write("SCRIPT,Break-out, BO-Date, Closing \n");
+
+            for (BhavStatistics data : stats.values()) {
+                try {
+                    if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
+                        writer.write(data.getSymbol() + "," + data.isDeliveryBreakout() + "," + data.getMaxDeliveryVolumeBreakOutDate() + ","
+                                + data.getCloseAsPerHighDeliveryCandle() + ","
+                                + "\n");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("File saved to : " + file.getPath());
+    }
+    public static void saveRangeFormationSetupToFile(String fileName, Map<String, BhavStatistics> stats) {
+        File file = new File(fileName);
+        try (
+                FileWriter fileWriter = new FileWriter(file);
+                BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write("SCRIPT,Volume-BO-Date,Range-Date,Delivery-Inc-Date\n");
+
+            for (BhavStatistics data : stats.values()) {
+                try {
+                    if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
+                        writer.write(data.getSymbol() + ","
+                                + data.getMaxVolumeBreakoutDate() + ","
+                                + data.getBreakOutLocation() + ","
+                                + data.getMaxDeliveryVolumeBreakOutDate() + ","
+                                + "\n");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("File saved to : " + file.getPath());
+    }
+
+    public static void saveRangesToFile(String fileName, List<RangeFormationResult> results) {
+        File file = new File(fileName);
+        try (
+                FileWriter fileWriter = new FileWriter(file);
+                BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write("SCRIPT,Volume Bo, Delivery Bo, Gap-Date\n");
+
+            for (RangeFormationResult data : results) {
+                try {
+                    if (null != data && NSEConstant.getNiftyList().get(data.getName()) != null) {
+                        writer.write(data.getName() + "," + data.getVolData() + "," + data.getDelDate() + "," + data.getGapDate()+"\n");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("File saved to : " + file.getPath());
+    }
+
+
+    public static void saveDeliveryWithGaps(String fileName, List<RangeFormationResult> results) {
+        File file = new File(fileName);
+        try (
+                FileWriter fileWriter = new FileWriter(file);
+                BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write("SCRIPT, D-High, D-Low, D-Close, D-Bo-Date, Gap-Type, Gap-Open, Gap-Date\n");
+
+            for (RangeFormationResult data : results) {
+                try {
+                    if (null != data && NSEConstant.getNiftyList().get(data.getName()) != null) {
+                        writer.write(data.getName() + ","
+                                + data.getDelHigh() + ","
+                                + data.getDelLow() + ","
+                                + data.getDelLastPrice() + ","
+                                + data.getDelDate() + ","
+                                + data.getGapType() + ","
+                                + data.getGapOpenPrice() + ","
+                                + data.getGapDate()+"\n");
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        LOGGER.info("File saved to : " + file.getPath());
+    }
+
+
+    public static void deliveryBreakoutsConsecutive(String fileName, Map<String, List<DeliveryStrategyCondition>> result) {
+        File file = new File(fileName);
+        try (
+                FileWriter fileWriter = new FileWriter(file);
+                BufferedWriter writer = new BufferedWriter(fileWriter)) {
+            writer.write("SCRIPT, VOLUME BREAKOUT, FIRST BREAKOUT, DIRECTION, GAP,  CandleFormation\n");
+
+            result.forEach((s, deliveryStrategyConditions) -> {
+                try {
+                    if (NSEConstant.getNiftyList().get(s) != null) {
+//                        writer.write(s + ",");
+                        for (DeliveryStrategyCondition deliveryStrategyCondition : deliveryStrategyConditions) {
+                            writer.write(s + "," + deliveryStrategyCondition.getVolumeBreakoutDate() + "," + deliveryStrategyCondition.isDeliveryBreakout() + "," + deliveryStrategyCondition.getPriceMovement() + "," + deliveryStrategyCondition.getGapFound() + "," + deliveryStrategyCondition.getCandleFormation() + ",");
+                            writer.write("\n");
+                        }
+
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -377,7 +529,7 @@ public class FileUtils {
             for (BhavStatistics data : stats.values()) {
                 try {
                     if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
-                        writer.write(data.getSymbol() + ","+ data.getMaxVolumeDate() +
+                        writer.write(data.getSymbol() + "," + data.getMaxVolumeDate() +
                                 "," + String.join(",", data.getAction()) +
                                 "\n");
                     }
@@ -390,6 +542,7 @@ public class FileUtils {
         }
         LOGGER.info("File saved to : " + file.getPath());
     }
+
     public static void saveLowDeliveryOfLastTwoMonths(String fileName, Map<String, BhavStatistics> stats) {
         File file = new File(fileName);
         try (
@@ -522,7 +675,7 @@ public class FileUtils {
                                 + "," + data.getMaxDeliveryVolumeDate()
                                 + "," + data.isMonthHighLowTarget()
                                 + "," + data.isHighVolumeHighLowTarget()
-                                + "," + String.join(",", data.getAction()) +"\n");
+                                + "," + String.join(",", data.getAction()) + "\n");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -546,7 +699,7 @@ public class FileUtils {
                 try {
                     if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
                         writer.write(data.getSymbol()
-                                + "," + String.join(",", data.getAction()) +"\n");
+                                + "," + String.join(",", data.getAction()) + "\n");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -557,8 +710,6 @@ public class FileUtils {
         }
         LOGGER.info("File saved to : " + file.getPath());
     }
-
-
 
 
     public static void saveVolumeBreakoutAnalysis(String fileName, Map<String, BhavStatistics> stats) {
@@ -572,7 +723,7 @@ public class FileUtils {
                 try {
                     if (null != data && NSEConstant.getNiftyList().get(data.getSymbol()) != null) {
                         writer.write(data.getSymbol()
-                                + "," + String.join(",", data.getAction()) +"\n");
+                                + "," + String.join(",", data.getAction()) + "\n");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -583,6 +734,7 @@ public class FileUtils {
         }
         LOGGER.info("File saved to : " + file.getPath());
     }
+
     public static void saveBhavResultNifty50ToFile(String fileName, Map<String, BhavResult> finalData) {
         File file = new File(fileName);
         try (
@@ -665,24 +817,24 @@ public class FileUtils {
         return new File(fromLocation).exists();
     }
 
-    public static void main(String[] args) {
+    /*public static void main(String[] args) {
         Flux<String> stringFlux = readFileFromLocation(String.format(NSEConstant.BHAV_DATA_OUTPUT_FOLDER, "01122021"));
         stringFlux.subscribe(s -> {
             LOGGER.info(s);
         });
-    }
+    }*/
 
     public static List<BhavData> loadBhavDataIfNotExistsDownloadFromNse(String date) {
         String fileLocation = String.format(NSEConstant.BHAV_DATA_OUTPUT_FOLDER, date);
         Flux<String> stringFlux = FileUtils.readFileFromLocation(fileLocation);
         List<String> retry = new ArrayList<>();
-        stringFlux.subscribe(s -> {
+      /*  stringFlux.subscribe(s -> {
             if (s == null || s.isEmpty()) {
                 FileUtils.downloadBhavData(date).block();
                 LOGGER.info("Downloading from nse website");
 //                retry.add("1");
             }
-        });
+        });*/
 
         /*if (!retry.isEmpty()) {
             stringFlux = FileUtils.readFileFromLocation(fileLocation);

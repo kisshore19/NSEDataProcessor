@@ -364,7 +364,7 @@ public class OptionsDataServiceImpl implements OptionsDataService {
 
     public static void main(String[] args) {
         OptionsDataServiceImpl ss = new OptionsDataServiceImpl();
-        ss.downloadData("20032024", "31032024");
+        ss.downloadData("20032024", "13052024");
        // System.out.println(kk.getMaxCallOrPutPricesOgGivenDates("01-Jan-2022", "27-Jan-2022", "27-Jan-2022", "RELIANCE","CE", 2000.0));
 
         //kk.backTestData("01022021", "28022021");
